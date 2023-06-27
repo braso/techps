@@ -20,11 +20,19 @@ $CONTEX['path'] = "/techps/sistema";
 
 $servername = "localhost";
 
-$username = "techps_sistema";
+$username = "brasomo_techps_sistema";
 
 $password = "techps!sistema";
 
-$dbname = "techps_sistema";
+$dbname = "brasomo_techps_sistema";
+
+// $servername = "localhost";
+
+// $username = "techps_sistema";
+
+// $password = "techps!sistema";
+
+// $dbname = "techps_sistema";
 
 
 
