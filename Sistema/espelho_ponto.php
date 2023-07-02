@@ -223,7 +223,7 @@ function ordena_horarios($inicio, $fim) {
 }
 
 
-function ordena_horarios_pares($inicio, $fim) {
+function ordena_horarios_pares($inicio, $fim, $ehEspera = 0) {
     // Inicializa o array resultante e o array de indicação
     $horarios = array();
     $origem = array();
@@ -259,25 +259,77 @@ function ordena_horarios_pares($inicio, $fim) {
     }
 	
 
-	$totalIntervalo = new DateTime('2000-01-01 00:00');
-	$ultimo_inicio = null;
+	$dtInicioAdicionalNot = new DateTime(substr($horarios[0],0,10).' 05:00');
+	$dtFimAdicionalNot = new DateTime(substr($horarios[0],0,10).' 22:00');
+	$totalIntervalo = new DateTime(substr($horarios[0],0,10).' 00:00');
+	$totalIntervaloAdicionalNot = new DateTime(substr($horarios[0],0,10).' 00:00');
+	$inicio_atual = null;
 	$pares = array();
+	$paresParaRepouso = array();
 
 	foreach ($horarios_com_origem as $item) {
 		if ($item["origem"] == "inicio") {
-			$ultimo_inicio = $item["horario"];
-		} elseif ($item["origem"] == "fim" && $ultimo_inicio != null) {
-			$hInicio = new DateTime('2000-01-01 ' . date("H:i", strtotime($ultimo_inicio)));
-			$hFim = new DateTime('2000-01-01 ' . date("H:i", strtotime($item["horario"])));
+			$inicio_atual = $item["horario"];
+		} elseif ($item["origem"] == "fim" && $inicio_atual != null) {
+			$hInicio = new DateTime($inicio_atual);
+			$hFim = new DateTime($item["horario"]);
 			
 			$interval = $hInicio->diff($hFim);
-			$totalIntervalo->add($interval);
 
-			$interval = $interval->format("%H:%I");
-			
-			$pares[] = array("inicio" => date("H:i", strtotime($ultimo_inicio)), "fim" => date("H:i", strtotime($item["horario"])), "intervalo" => $interval);
-			$ultimo_inicio = null;
-		} elseif ($item["origem"] == "fim" && $ultimo_inicio == null) {
+			// se intervalo > 2 horas && ehEspera true
+			if($ehEspera == 1 && (($interval->h*60) + $interval->i > 120)){
+				$paresParaRepouso[] = array("inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"])));
+			}else{
+
+				$totalIntervalo->add($interval);
+
+				$interval = $interval->format("%H:%I");
+				
+				$pares[] = array("inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"])), "intervalo" => $interval);
+
+			}
+
+			// VERIFICA HORA SE HÁ HORA EXTRA ACIMA DAS 22:00
+			if($hFim > $dtFimAdicionalNot){
+				$fimExtra = date("H:i", strtotime($item["horario"]));
+				if($hInicio > $dtFimAdicionalNot){
+					$hInicioAdicionalNot = $hInicio; //CRIA UMA NOVA VARIAVEL PARA NO CASO DAS 05:00
+					$incioExtra = date("H:i", strtotime($inicio_atual));
+				}else{
+					$hInicioAdicionalNot = new DateTime(substr($horarios[0],0,10).' 22:00');
+					$incioExtra = '22:00';
+				}
+
+				$intervalAdicionalNot = $hInicioAdicionalNot->diff($hFim);
+				$totalIntervaloAdicionalNot->add($intervalAdicionalNot);
+				
+				$intervalAdicionalNot = $intervalAdicionalNot->format("%H:%I");
+				
+
+				$paresAdicionalNot[] = array("inicio" => $incioExtra, "fim" => $fimExtra, "intervalo" => $intervalAdicionalNot);
+			}
+
+			// VERIFICA HORA SE HÁ HORA EXTRA ABAIXO DAS 05:00
+			if($hInicio < $dtInicioAdicionalNot){
+				$incioExtra = date("H:i", strtotime($inicio_atual));
+				if($hFim > $dtInicioAdicionalNot){
+					$hFim = new DateTime(substr($horarios[0],0,10).' 05:00');
+					$fimExtra = '05:00';
+				}else{
+					$fimExtra = date("H:i", strtotime($item["horario"]));
+				}
+
+				$intervalAdicionalNot = $hInicio->diff($hFim);
+				$totalIntervaloAdicionalNot->add($intervalAdicionalNot);
+				
+				$intervalAdicionalNot = $intervalAdicionalNot->format("%H:%I");;
+				
+
+				$paresAdicionalNot[] = array("inicio" => $incioExtra, "fim" => $fimExtra, "intervalo" => $intervalAdicionalNot);
+			}
+
+			$inicio_atual = null;
+		} elseif ($item["origem"] == "fim" && $inicio_atual == null) {
             // Se encontrarmos um fim sem um início correspondente, armazenamos o horário sem par
             $sem_fim[] = $item["horario"];
         }
@@ -285,17 +337,47 @@ function ordena_horarios_pares($inicio, $fim) {
 
 	if(count($inicio) == 0 && count($fim) == 0){
 		$iconeAlerta = '';
-	}elseif(count($inicio) != count($fim) || count($horarios_com_origem)/2 != count($pares)){ 
+	}elseif(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares) + count($paresParaRepouso))){ 
 		$iconeAlerta = "<a><i style='color:red;' title='$alertaTooltip' class='fa fa-info-circle'></i></a>";
 	}else{
 		$iconeAlerta = "<a><i style='color:green;' title='$alertaTooltip' class='fa fa-info-circle'></i></a>";
 	}
+	
+	
 	
 
 	$pares_horarios['horariosOrdenados'] = $horarios_com_origem;
 	$pares_horarios['pares'] = $pares;
 	$pares_horarios['totalIntervalo'] = $totalIntervalo->format('H:i');
 	$pares_horarios['icone'] = $iconeAlerta;
+	
+	if(count($horarios_com_origem) > 2){
+		$totalInterjornada = new DateTime(substr($horarios[0],0,10).' 00:00');
+		for ($i=0; $i < count($horarios_com_origem); $i++) { 
+			$horarioVez = $horarios_com_origem[$i];
+			$horarioAnterior = $horarios_com_origem[($i-1)];
+			if($horarioVez['origem'] == 'inicio' && $horarioAnterior['origem'] == 'fim'){
+				$dtInicio = new DateTime($horarioVez['horario']);
+				$dtFim = new DateTime($horarioAnterior['horario']);
+				
+				$intervalInterjornada = $dtFim->diff($dtInicio);
+
+				$totalInterjornada->add($intervalInterjornada);
+				
+			}
+		}
+
+		$pares_horarios['interjornada'] = $totalInterjornada->format('H:i');
+
+	}
+
+	if(count($paresParaRepouso) > 0){
+		$pares_horarios['paresParaRepouso'] = $paresParaRepouso;
+	}
+	if(count($paresAdicionalNot) > 0){
+		$pares_horarios['paresAdicionalNot'] = $paresAdicionalNot;
+		$pares_horarios['totalIntervaloAdicionalNot'] = $totalIntervaloAdicionalNot->format('H:i');
+	}
 	
 	
 	
@@ -465,37 +547,21 @@ function diaDetalhePonto($matricula, $data){
 		
 	}
 	
-	if($fimDataAdicional != ''){
-
-		$sqlDiaAnterior = query("SELECT pont_tx_data FROM ponto WHERE pont_tx_status != 'inativo' AND pont_tx_matricula = '$matricula'  AND pont_tx_data < '$data' ORDER BY pont_tx_data DESC LIMIT 1");
-		$aDiaAnterior = carrega_array($sqlDiaAnterior);
-
-		$dateInicioJornada = new DateTime($arrayInicioJornada2[0]);
-		$dateDiaAnterior = new DateTime($aDiaAnterior[0]);
-		
-
-		$diffJornada = $dateInicioJornada->diff($dateDiaAnterior);
-		// $diffIntersticio = $diffJornada->format("%H:%I");
-
-		// Obter a diferença total em minutos
-		$diffMinutos = ($diffJornada->days * 24 * 60) + ($diffJornada->h * 60) + $diffJornada->i;
-
-		// Calcular as horas e minutos
-		$horas = floor($diffMinutos / 60);
-		$minutos = $diffMinutos % 60;
-
-		// Formatar a string no formato HH:MM
-		$diffIntersticio = sprintf("%02d:%02d", $horas, $minutos);
-		
-		// echo "$data - $arrayInicioJornada2[0] - $aDiaAnterior[0] --> $diffIntersticio<br>";
-
-		$aRetorno['intersticio'] = $diffIntersticio;
-	}
-	
 	$jornadaOrdenado = ordena_horarios_pares($arrayInicioJornada2, $arrayFimJornada2);
 	$refeicaoOrdenada = ordena_horarios_pares($arrayInicioRefeicao, $arrayFimRefeicao);
-	$esperaOrdenada = ordena_horarios_pares($aDataHorainicioEspera, $aDataHorafimEspera);
+	$esperaOrdenada = ordena_horarios_pares($aDataHorainicioEspera, $aDataHorafimEspera, 1);
 	$descansoOrdenado = ordena_horarios_pares($aDataHorainicioDescanso, $aDataHorafimDescanso);
+	
+	if($esperaOrdenada['paresParaRepouso']){
+		for ($i=0; $i < count($esperaOrdenada['paresParaRepouso']); $i++) { 
+			$aDataHorainicioRepouso[] = $data.' '.$esperaOrdenada['paresParaRepouso'][$i]['inicio'];
+			$aDataHorafimRepouso[] = $data.' '.$esperaOrdenada['paresParaRepouso'][$i]['fim'];
+			$aDataHorainicioEsperaParaRepouso[] = $data.' '.$esperaOrdenada['paresParaRepouso'][$i]['inicio'];
+			$aDataHorafimEsperaParaRepouso[] = $data.' '.$esperaOrdenada['paresParaRepouso'][$i]['fim'];
+
+		}
+		$esperaParaRepousoOrdenado = ordena_horarios_pares($aDataHorainicioEsperaParaRepouso, $aDataHorafimEsperaParaRepouso);
+	}
 	$repousoOrdenado = ordena_horarios_pares($aDataHorainicioRepouso, $aDataHorafimRepouso);
 
 	$aRetorno['diffRefeicao'] = $refeicaoOrdenada['icone'].$refeicaoOrdenada['totalIntervalo'];
@@ -506,7 +572,7 @@ function diaDetalhePonto($matricula, $data){
 	// echo "$data <br>";
 	
 	// echo "<pre>";
-	// print_r($esperaOrdenada);
+	// print_r($jornadaOrdenado);
 	// echo "</pre>";
 	// echo "<pre>";
 	// print_r($descansoOrdenado);
@@ -543,16 +609,6 @@ function diaDetalhePonto($matricula, $data){
 	}
 
 	
-	
-	// echo $data;
-	// echo "<pre>";
-	// print_r($arrayInicioJornada);
-	// print_r($arrayFimJornada);
-	// print_r($jornadaOrdenado);
-	
-	// echo "</pre>";
-	
-	// $aRetorno['diffJornada'] = somarHorarios($arrayDiffJornada);
 	$aRetorno['diffJornada'] = $jornadaOrdenado['icone'].$jornadaOrdenado['totalIntervalo'];
 	// FIM CALCULO CALCULO JORNADA TRABALHO
 	
@@ -578,11 +634,65 @@ function diaDetalhePonto($matricula, $data){
 	$aRetorno['diffJornadaEfetiva'] = verificaTempo($diffJornadaEfetiva->format("%H:%I"), $horaAlertaJornadaEfetiva);
 	// FIM CALCULO JORNADA EFETIVAMENTE DO DIA
 
+	// INICIO CALCULO INTERSTICIO
+	if($inicioDataAdicional != ''){
+
+		$sqlDiaAnterior = query("SELECT pont_tx_data FROM ponto WHERE pont_tx_status != 'inativo' AND pont_tx_matricula = '$matricula'  AND pont_tx_data < '$data' ORDER BY pont_tx_data DESC LIMIT 1");
+		$aDiaAnterior = carrega_array($sqlDiaAnterior);
+
+		$dateInicioJornada = new DateTime($arrayInicioJornada2[0]);
+		$dateDiaAnterior = new DateTime($aDiaAnterior[0]);
+		
+
+		$diffJornada = $dateInicioJornada->diff($dateDiaAnterior);
+		// $diffIntersticio = $diffJornada->format("%H:%I");
+
+		// Obter a diferença total em minutos
+		$diffMinutos = ($diffJornada->days * 24 * 60) + ($diffJornada->h * 60) + $diffJornada->i;
+
+		// Calcular as horas e minutos
+		$horas = floor($diffMinutos / 60);
+		$minutos = $diffMinutos % 60;
+
+		// Formatar a string no formato HH:MM
+		$hInter = sprintf("%02d:%02d", $horas, $minutos);
+		
+		$diffIntersticio = somarHorarios(array($hInter, $horaTotalIntervalos->format("H:i"), $jornadaOrdenado['interjornada']));
+
+
+		list($hours, $minutes) = explode(':', $diffIntersticio);
+		$tsInterTotal = $hours*3600 + $minutes*60;
+
+		list($hours, $minutes) = explode(':', $hInter);
+		$hInter = $hours*3600 + $minutes*60;
+
+		$diferenca11h = (11 * 3600);
+		$diferenca8h = (8 * 3600);
+
+		$iconeInter = '';
+		
+		if ($tsInterTotal < $diferenca11h) {
+			$iconeInter .= "<a><i style='color:red;' title='Interstício Total de 11:00 não respeitado' class='fa fa-warning'></i></a>";
+		}
+		
+		if ($hInter < $diferenca8h) {
+			$iconeInter .= "<a><i style='color:red;' title='O mínimo de 08:00h ininterruptas no primeiro período, não respeitado.' class='fa fa-warning'></i></a>";
+		}
+
+
+		$aRetorno['intersticio'] = $iconeInter.$diffIntersticio;
+	}
+
+	// FIM CALCULO INTERSTICIO
+
+
+
+
 
 	//CALCULO ESPERA INDENIZADA
 	$horaJornadaEsperada = DateTime::createFromFormat('H:i', $aRetorno['jornadaPrevista']);
 	$horario1 = DateTime::createFromFormat('H:i', ($diffJornadaEfetiva->format("%H:%I")));
-	$horario2 = DateTime::createFromFormat('H:i', $esperaOrdenada['totalIntervalo']);
+	$horario2 = DateTime::createFromFormat('H:i', somarHorarios(array($esperaOrdenada['totalIntervalo'], $esperaParaRepousoOrdenado['totalIntervalo'])));
 
 	$esperaIndenizada = clone $horario1;
 	$esperaIndenizada->add(new DateInterval('PT' . $horario2->format('H') . 'H' . $horario2->format('i') . 'M'));
@@ -609,12 +719,25 @@ function diaDetalhePonto($matricula, $data){
 		}
 	}
 
-	// echo "$aRetorno[diffJornadaEfetiva] | $somaEspera | $esperaIndenizada";
-	// echo "<br>";
-
 	$aRetorno['esperaIndenizada'] = $esperaIndenizada;
 	
 	//FIM CALCULO ESPERA INDENIZADA
+
+
+	//INICIO ADICIONAL NOTURNO
+	$jornadaNoturno = $jornadaOrdenado['totalIntervaloAdicionalNot'];
+	
+	$refeicaoNoturno = $refeicaoOrdenada['totalIntervaloAdicionalNot'];
+	$esperaNoturno = $esperaOrdenada['totalIntervaloAdicionalNot'];
+	$descansoNoturno = $descansoOrdenado['totalIntervaloAdicionalNot'];
+	$repousoNoturno = $repousoOrdenado['totalIntervaloAdicionalNot'];
+
+	$intervalosNoturnos = somarHorarios([$refeicaoNoturno, $esperaNoturno, $descansoNoturno, $repousoNoturno]);
+
+	$adicionalNoturno = gmdate('H:i' , (strtotime($data.' '.$jornadaNoturno)) - (strtotime($data.' '.$intervalosNoturnos)));
+	$aRetorno['adicionalNoturno'] = $adicionalNoturno == '00:00' ? '' : $adicionalNoturno;
+
+	//FIM ADICIONAL NOTURNO
 
 	//CALCULO SALDO
 	$dateCargaHoraria = new DateTime($aRetorno['jornadaPrevista']);
@@ -645,54 +768,39 @@ function diaDetalhePonto($matricula, $data){
 	}
 
 	
-	// Exemplo de uso da função
-	$inicio_jornada = $arrayInicioJornada[0];
-	$fim_jornada = end($arrayFimJornada);
-	// $pausas = array(
-	// 	array("inicio" => "08:30", "fim" => "10:30"), // intervalo 1
-	// 	array("inicio" => "13:00", "fim" => "16:00")  // intervalo 2
-	// );
-	// echo "<pre>";
-	// print_r(array($inicioDataRefeicao));
-	// print_r($aDataHorainicioEspera);
-	// print_r(array_merge((array)$inicioDataRefeicao,(array)$aDataHorainicioEspera));
-	// echo "</pre>";
-
-	// exit;
-	// $pausas = ordena_horarios_pares(
-	// 	array_merge((array)$inicioDataRefeicao, (array)$aDataHorainicioEspera),
-	// 	array_merge((array)$fimDataRefeicao, (array)$aDataHorafimEspera)
-	// );
-
-	// print_r($pausas);
-	
-	// echo "<br>$data - Máximo de direção contínua: ($inicio_jornada - $fim_jornada): " . calcular_maximo_direcao($inicio_jornada, $fim_jornada, $pausas);
-	// echo "$inicio_jornada, $fim_jornada, $pausas <br>";
-	// $mdc = calcular_maximo_direcao($inicio_jornada, $fim_jornada, $pausas);
-
 	$mdc = maxDirecaoContinua($arrayMDC);
 
 	$aRetorno['maximoDirecaoContinua'] = verificaTempoMdc($mdc, $descansoOrdenado['totalIntervalo']);
 
+
+	// VERIFICA SE A JORNADA É MAIOR QUE 06:00
+	$dtJornada = new DateTime($data.' '.$jornadaOrdenado['totalIntervalo']);
+	$dtJornadaMinima = new DateTime($data.' '.'06:00');
+	if($dtJornada > $dtJornadaMinima){
+		$verificaJornadaMinima = 1;
+	}else{
+		$verificaJornadaMinima = 0;
+	}
+	//FIM VERIFICA JORNADA MINIMA
 
 	if($iconeAbono != ''){
 		$aRetorno['jornadaPrevista'] = $iconeAbono."&nbsp;".$aRetorno['jornadaPrevista'];
 	}
 
 	// if($aRetorno['inicioJornada'] == '' && $cargaHoraria != 0){
-	if($arrayInicioJornada[0] == ''){
+	if($arrayInicioJornada[0] == '' && $verificaJornadaMinima == 1){
 		$aRetorno['inicioJornada'] = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 	}
 	// if($aRetorno['fimJornada'] == '' && $cargaHoraria != 0){
-	if($arrayFimJornada[0] == ''){
+	if($arrayFimJornada[0] == '' && $verificaJornadaMinima == 1){
 		$aRetorno['fimJornada'] = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
 	}
 	// if($aRetorno['inicioRefeicao'] == '' && $cargaHoraria != 0){
-	if($aRetorno['inicioRefeicao'] == ''){
+	if($aRetorno['inicioRefeicao'] == '' && $verificaJornadaMinima == 1){
 		$aRetorno['inicioRefeicao'] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>";
 	}
 	// if($aRetorno['fimRefeicao'] == '' && $cargaHoraria != 0){
-	if($aRetorno['fimRefeicao'] == ''){
+	if($aRetorno['fimRefeicao'] == '' && $verificaJornadaMinima == 1){
 		$aRetorno['fimRefeicao'] = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>";
 	}
 
@@ -710,82 +818,6 @@ function diaDetalhePonto($matricula, $data){
 
 	if(count($arrayFimRefeicao) > 0){
 		$aRetorno['fimRefeicao'] = implode("<br>", $arrayFimRefeicaoFormatado);
-	}
-
-	if($inicioDataAdicional!= '' && $fimDataAdicional != ''){
-		// // Definindo as datas de início e fim do intervalo
-		// $data_inicio = new DateTime($inicioDataAdicional);
-		// $data_fim = new DateTime($fimDataAdicional);
-		// // $data_inicio = new DateTime('2023-03-15 23:30:00');
-		// // $data_fim = new DateTime('2023-03-16 04:45:00');
-
-		// // Definindo as datas de início e fim do intervalo desejado (22h do dia anterior até 5h do dia seguinte)
-		// $intervalo_inicio = clone $data_inicio;
-		// $intervalo_inicio->setTime(22, 0, 0);
-		// if ($intervalo_inicio > $data_inicio) {
-		// 	$intervalo_inicio->modify('-1 day');
-		// }
-
-		// $intervalo_fim = clone $data_inicio;
-		// $intervalo_fim->setTime(5, 0, 0);
-		// if ($intervalo_fim < $data_inicio) {
-		// 	$intervalo_fim->modify('+1 day');
-		// }
-
-		// // Verificando se o intervalo de tempo está dentro do intervalo desejado
-		// if ($data_inicio >= $intervalo_inicio && $data_fim <= $intervalo_fim) {
-		// 	$duracao_intervalo = $data_fim->diff($data_inicio);
-		// 	$duracao_intervalo_formatada = $duracao_intervalo->format('%H:%I:%S');
-		// 	$aRetorno['adicionalNoturno'] = $duracao_intervalo_formatada;
-		// } else {
-		// 	$aRetorno['adicionalNoturno'] = "";
-		// }
-
-
-		// Define as batidas de ponto
-		// $hora_inicial = new DateTime('2023-03-16 22:00:00');
-		// $hora_final = new DateTime('2023-03-17 05:00:00');
-		$hora_inicial = new DateTime($inicioDataAdicional);
-		$hora_final = new DateTime($fimDataAdicional);
-
-		// Define a hora em que o adicional noturno começa e termina
-		$inicio_adicional = new DateTime($hora_inicial->format('Y-m-d') . ' 22:00:00');
-		$fim_adicional = new DateTime($hora_inicial->format('Y-m-d') . ' 05:00:00');
-		$fim_adicional->modify('+1 day');
-
-
-		// Verifica se a batida de ponto inicial ocorreu antes das 22h
-		if ($hora_inicial < $inicio_adicional) {
-			$hora_inicial = $inicio_adicional;
-		}
-
-		// Verifica se a batida de ponto final ocorreu depois das 5h da manhã
-		if ($hora_final >= $fim_adicional) {
-			$hora_final = $fim_adicional;
-		}
-
-		// print_r($hora_inicial);
-		// echo "<hr>";
-		// print_r($hora_final);
-		// echo "<hr>";
-
-		// Calcula a duração do adicional noturno
-		$duracao_adicional = $hora_inicial ->diff($hora_final);
-
-		// Formata a duração do adicional noturno em HH:MM
-		$duracao_formatada = $duracao_adicional->format('%H:%I');
-
-		// Verifica se houve adicional noturno
-		if ($duracao_adicional->invert || $duracao_adicional->format('%H:%I') === '00:00') {
-			// echo "Não há adicional noturno a ser calculado";
-			$aRetorno['adicionalNoturno'] = "";
-		} else {
-			// echo "Duração do adicional noturno: " . $duracao_formatada;
-			$aRetorno['adicionalNoturno'] = $duracao_formatada;
-		}
-
-
-
 	}
 
 	if(count($aDataHorainicioEspera)>0 && count($aDataHorafimEspera)>0){
