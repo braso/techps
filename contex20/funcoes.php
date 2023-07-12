@@ -469,7 +469,8 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		$data_input="<script>$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99'], clearIncomplete: true, placeholder: \" \" });</script>";
 	elseif($mascara=="MASCARA_CNPJ")
 		$data_input="<script>$('[name=\"$variavel\"]').inputmask('99.999.999/9999-99', { clearIncomplete: true, placeholder: \" \" });</script>";
-
+	elseif($mascara=="MASCARA_DINHERO")
+		$data_input="<script>$('[name=\"$variavel\"]').inputmask('#.##0,00', {reverse: true});</script>";
 			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
 $campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
