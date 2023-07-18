@@ -52,10 +52,10 @@ function layout_parametro(){
 	// $c[] = campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod[para_tx_jornadaSabado],3,'MASCARA_NUMERO');
 	$c[] = campo_hora('Jornada Semanal (Horas/Dia)','jornadaSemanal',$a_mod[para_tx_jornadaSemanal],3);
 	$c[] = campo_hora('Jornada Sábado (Horas/Dia)','jornadaSabado',$a_mod[para_tx_jornadaSabado],3);
-	$c[] = campo_hora('Tolerência (Horas/Minutos)','tolerancia',$a_mod[para_tx_tolerancia],3);
+	$c[] = campo_hora('Tolerência de jornada efetiva (Horas/Minutos)','tolerancia',$a_mod[para_tx_tolerancia],3);
 	$c[] = campo('Percentual da Hora Extra(%)','percentualHE',$a_mod[para_tx_percentualHE],3,'MASCARA_NUMERO');
 	$c[] = campo('Percentual da Hora Extra Sábado(%)','percentualSabadoHE',$a_mod[para_tx_percentualSabadoHE],3,'MASCARA_NUMERO');
-	$c[] = campo_hora('Quando Exceder o Percentual da Hora Extra passar para 100% (Horas/Minutos)','HorasEXExcedente',$a_mod[para_tx_HorasEXExcedente],3);
+	$c[] = campo_hora('Quando Exceder o limite de Horas Extras, O Percentual de Hora Extra passar para 100% (Horas/Minutos)','HorasEXExcedente',$a_mod[para_tx_HorasEXExcedente],3);
 	$c[] = campo('Diária Café da Manhã(R$)','diariasCafe',$a_mod[para_tx_diariasCafe],3,'MASCARA_DINHERO');
 	$c[] = campo('Diária Almoço(R$)','diariasAlmoco',$a_mod[para_tx_diariasAlmoco],3,'MASCARA_DINHERO');
 	$c[] = campo('Diária Jantar(R$)','diariasJanta',$a_mod[para_tx_diariasJanta],3,'MASCARA_DINHERO');
