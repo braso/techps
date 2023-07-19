@@ -152,8 +152,8 @@ function layout_ajuste(){
 
 	$c2[] = textarea('Justificativa:','descricao','',12);
 
-	$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,data,busca_data',"$_POST[id],$_POST[id],$_POST[data],".substr($_POST[data],0, -3));
-	$botao[] = botao('Voltar','index','id,busca_empresa,busca_motorista,data,busca_data',"$_POST[id],$aMotorista[enti_nb_empresa],$_POST[id],$_POST[data],".substr($_POST[data],0, -3));
+	$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST[data],0, -3));
+	$botao[] = botao('Voltar','index','busca_data1,busca_data2,id,busca_empresa,busca_motorista,data,busca_data',"$_POST[busca_data1],$_POST[busca_data2],$_POST[id],$aMotorista[enti_nb_empresa],$_POST[id],$_POST[data],".substr($_POST[data],0, -3));
 	
 	abre_form('Dados do Ajuste de Ponto');
 	linha_form($c);
