@@ -12,6 +12,14 @@ function index() {
 		$extra = " AND enti_nb_id = ".$_POST['busca_motorista'];
 	}
 
+	if($_POST[busca_data1] == ''){
+		$_POST[busca_data1] = date("Y-m-01");
+	}
+
+	if($_POST[busca_data2] == ''){
+		$_POST[busca_data2] = date("Y-m-d");
+	}
+
 	//CONSULTA
 	$c[] = combo_net('Empresa:','busca_empresa',$_POST[busca_empresa],4,'empresa');
 	// $c[] = campo_mes('Data:','busca_data',$_POST[busca_data],2);
@@ -40,7 +48,7 @@ function index() {
 		
 		// $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 		
-		$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_empresa = ".$_POST[busca_empresa]." $extra");
+		$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_empresa = ".$_POST[busca_empresa]." $extra ORDER BY enti_tx_nome");
 		while($aMotorista = carrega_array($sqlMotorista)){
 			
 			$startDate = new DateTime($_POST[busca_data1]);
@@ -98,7 +106,23 @@ function index() {
 			
 			if(count($aDia) > 0){
 
-				abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome]");
+				if($aMotorista[enti_nb_parametro] > 0 ){
+					$aParametro = carregar('parametro', $aMotorista[enti_nb_parametro]);
+					if( $aParametro[para_tx_jornadaSemanal] != $aMotorista[enti_tx_jornadaSemanal] ||
+						$aParametro[para_tx_jornadaSabado] != $aMotorista[enti_tx_jornadaSabado] ||
+						$aParametro[para_tx_percentualHE] != $aMotorista[enti_tx_percentualHE] ||
+						$aParametro[para_tx_percentualSabadoHE] != $aMotorista[enti_tx_percentualSabadoHE]){
+			
+						$ehPadrão = 'Não';
+					}else{
+						$ehPadrão = 'Sim';
+					}
+					
+					$convencaoPadrao = '| Convenção Padrão? ' . $ehPadrão;
+					
+				}
+
+				abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] $convencaoPadrao");
 			
 				$aDia[] = array_values(array_merge(array('','','','','','','','<b>TOTAL</b>'), $totalResumo));
 				
