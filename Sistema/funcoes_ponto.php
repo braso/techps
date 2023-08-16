@@ -136,10 +136,19 @@ function layout_ajuste(){
 	global $a_mod;
 
 	cabecalho('Espelho de Ponto');
+
+	if($_POST[busca_data1] == '' && $_POST[busca_data])
+		$_POST[busca_data1] = $_POST[busca_data];
+	if($_POST[busca_data2] == '' && $_POST[busca_data])
+		$_POST[busca_data2] = $_POST[busca_data];
 	
 	$aMotorista = carregar('entidade',$_POST[id]);
-	
-	$extra = " AND pont_tx_data LIKE '$_POST[data] %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
+
+	$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user WHERE endo_tx_mes = '".substr($_POST[data], 0,7).'-01'."' AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
+			AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND endo_tx_status = 'ativo' AND endo_nb_userCadastro = user_nb_id LIMIT 1");
+	$aEndosso = carrega_array($sqlCheck);
+		
+	$extra = " AND pont_tx_data LIKE '".$_POST[data]." %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
 
 	$c[] = texto('Matrícula',$aMotorista[enti_tx_matricula],2);
 	$c[] = texto('Motorista',$aMotorista[enti_tx_nome],5);
@@ -150,14 +159,19 @@ function layout_ajuste(){
 	$c2[] = combo_bd('Código Macro','idMacro','',4,'macroponto','','ORDER BY macr_nb_id ASC');
 	$c2[] = combo_bd('Motivo:','motivo','',4,'motivo','',' AND moti_tx_tipo = "Ajuste"');
 
-	$c2[] = textarea('Justificativa:','descricao','',12);
+	$c3[] = textarea('Justificativa:','descricao','',12);
 
-	$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST[data],0, -3));
+	if(count($aEndosso) == 0){
+		$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST[data],0, -3));
+	}else{
+		$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
+	}
 	$botao[] = botao('Voltar','index','busca_data1,busca_data2,id,busca_empresa,busca_motorista,data,busca_data',"$_POST[busca_data1],$_POST[busca_data2],$_POST[id],$aMotorista[enti_nb_empresa],$_POST[id],$_POST[data],".substr($_POST[data],0, -3));
 	
 	abre_form('Dados do Ajuste de Ponto');
 	linha_form($c);
 	linha_form($c2);
+	linha_form($c3);
 	fecha_form($botao);
 
 	$sql="SELECT *
@@ -167,6 +181,7 @@ function layout_ajuste(){
 		LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 		WHERE ponto.pont_tx_status != 'inativo' 
 		$extra";
+
 	
 	$cab = array('CÓD','DATA','HORA','TIPO','MOTIVO','JUSTIFICATIVA','USUÁRIO','DATA CADASTRO','');
 
