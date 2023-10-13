@@ -953,6 +953,20 @@ function diaDetalhePonto($matricula, $data) {
 	$dateJornadaEfetiva = new DateTime($jornadaEfetiva);
 	$saldoPositivo = $dateCargaHoraria->diff($dateJornadaEfetiva)->format("%r");
 
+	// error_reporting(E_ALL ^ E_NOTICE ^ E_WARNING);
+	// ini_set('display_errors', 1);
+	// print_r($esperaIndenizada);
+	// echo "<hr>";
+	// print_r($horaJornadaEsperada);
+	// echo "<hr>";
+	// print_r($horario1);
+	// echo "<hr>";
+	// print_r($horaJornadaEsperada);
+	// echo "<hr>";
+	// echo "<hr>";
+	
+	// exit;
+	
 	if ($esperaIndenizada > $horaJornadaEsperada && $horario1 < $horaJornadaEsperada) {
 
 		$esperaIndenizada = $horaJornadaEsperada->diff($esperaIndenizada)->format('%H:%I');
@@ -960,10 +974,14 @@ function diaDetalhePonto($matricula, $data) {
 
 		$jornadaEfetiva = $aRetorno['jornadaPrevista'];
 	} else {
-		if ($saldoPositivo == '-' || $horario2->format('H:i') == '00:00') {
+		if ($saldoPositivo == '-' && $horario2->format('H:i') == '00:00') {
 			$esperaIndenizada = '';
 		} else {
 			$esperaIndenizada = $horario2->format('H:i');
+		}
+		
+		if($esperaIndenizada == '00:00'){
+			$esperaIndenizada = '';
 		}
 	}
 
