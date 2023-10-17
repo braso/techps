@@ -660,7 +660,7 @@ function diaDetalhePonto($matricula, $data) {
 	$aEmpresa = carregar('empresa', $aMotorista[enti_nb_empresa]);
 	$aEmpCidade = carregar('cidade', $aEmpresa[empr_nb_cidade]);
 	if ($aMotorista[enti_nb_empresa] && $aEmpresa[empr_nb_cidade] && $aEmpCidade[cida_nb_id] && $aEmpCidade[cida_tx_uf]) {
-		$extraFeriado = " AND (feri_nb_cidade = '$aEmpCidade[cida_nb_id]' OR feri_tx_uf = '$aEmpCidade[cida_tx_uf]')";
+		$extraFeriado = " AND ((feri_nb_cidade = '$aEmpCidade[cida_nb_id]' OR feri_tx_uf = '$aEmpCidade[cida_tx_uf]') OR ((feri_nb_cidade = '' OR feri_nb_cidade IS NULL) AND (feri_tx_uf = '' OR feri_tx_uf IS NULL)))";
 	}
 
 	$aParametro = carregar('parametro', $aMotorista[enti_nb_parametro]);
